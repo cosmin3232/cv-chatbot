@@ -5,7 +5,7 @@ A chatbot project with a Next.js frontend and a separate backend directory.
 ## Structure
 
 - `frontend/`: Next.js, TypeScript, Tailwind CSS, shadcn/ui, and Prompt Kit.
-- `backend/`: Placeholder for the backend implementation.
+- `backend/`: FastAPI chat API, local Ollama integration, and PDF/Word knowledge import.
 
 ## Run locally
 
@@ -15,7 +15,7 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:3000. The chat currently uses demo replies; an AI backend is not connected yet. Messages are stored in memory and reset on refresh.
+Open http://localhost:3000. The frontend calls the backend at `http://localhost:8000` by default. Set up Ollama and import/review your documents following [backend/README.md](backend/README.md), then start the backend before chatting. Conversations are stored in browser memory and reset on refresh.
 
 ## Production build
 

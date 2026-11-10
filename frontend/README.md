@@ -2,9 +2,13 @@ This is a [Next.js](https://nextjs.org) chat frontend using [shadcn/ui](https://
 
 ## Chat UI
 
-The home page renders `src/components/chat.tsx`. It supports starter prompts, multiline input, sending messages, automatic scrolling, and clearing the conversation with **New chat**. Messages are held in memory and reset on refresh. Replies are explicitly labeled demo responses; no AI service is connected and no messages are sent to a server.
+The home page renders `src/components/chat.tsx`. It includes a responsive conversation sidebar, conversation search, recruiter-focused starter prompts, multiline input, Markdown replies, copy-message actions, and automatic scrolling. Use **New conversation** to start another chat, select a sidebar entry to resume a conversation (including its draft), or use the header trash button to delete the current conversation. On mobile, the header menu opens the conversation sidebar.
 
-To connect the backend, replace the demo reply in `sendMessage` with your API request and append the returned assistant message.
+Conversations and drafts are held in memory and reset on refresh. Prompts and recent history are sent to the FastAPI backend, which calls Ollama with reviewed CV context. Set up the model and documents using [backend/README.md](../backend/README.md).
+
+The UI calls `agentService.sendPrompt({ conversationId, prompt, history }, { signal })` from `src/services/agent-service.ts`. It sends a JSON POST to `/api/chat` on the backend and validates the `{ content: string }` response. History contains previous messages, excluding the new prompt, and is bounded to the server's limits. Pending requests disable sending in their own conversation; deleting a conversation cancels its browser request. Failed requests restore the draft and display an error so it can be sent again.
+
+`NEXT_PUBLIC_API_URL` defaults to `http://localhost:8000`. Copy `.env.example` to `.env.local` to override it. This URL is public and must be reachable from the visitor's browser; do not put secrets in it. Restart Next.js after changes and rebuild for production. The HTTP helper in `src/services/http-client.ts` forwards cancellation and throws `HttpError` for unsuccessful responses. Requests time out after 130 seconds.
 
 shadcn/ui is configured in `components.json` with Radix components and Tailwind v4. Prompt Kit component source lives in `src/components/ui/` alongside its shadcn dependencies. To add more components, run these commands from `frontend`:
 
@@ -14,6 +18,8 @@ npx shadcn@latest add "https://prompt-kit.com/c/loader.json"
 ```
 
 ## Getting Started
+
+Run the service tests with `node --test tests/services.test.mjs` from `frontend` using Node with built-in TypeScript support. Tests cover request payloads, response validation, bounded history, cancellation, HTTP errors, and network failures.
 
 First, run the development server:
 
