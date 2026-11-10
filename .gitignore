@@ -1,0 +1,21 @@
+# Dependencies and build output
+node_modules/
+.next/
+out/
+coverage/
+*.tsbuildinfo
+
+# Local configuration and secrets
+.env*
+!.env.example
+*.pem
+.DS_Store
+Thumbs.db
+*.log
+
+# Python backend
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
