@@ -9,14 +9,19 @@ from pypdf import PdfReader
 from .config import BACKEND_DIR
 
 
-def extract_document(path: Path) -> str:
+def extract_document(path: Path, *, pdf_label="CV", docx_label="Additional information", max_pages=None, max_characters=None) -> str:
     if path.suffix.lower() == ".pdf":
         pages = []
-        for number, page in enumerate(PdfReader(path).pages, start=1):
+        reader = PdfReader(path)
+        if max_pages is not None and len(reader.pages) > max_pages:
+            raise ValueError(f"Document exceeds {max_pages} pages.")
+        for number, page in enumerate(reader.pages, start=1):
             text = (page.extract_text() or "").strip()
             if not text:
                 raise ValueError(f"Page {number} has no extractable text. OCR is required for scanned pages.")
-            pages.append(f"## CV, page {number}\n\n{text}")
+            pages.append(f"## {pdf_label}, page {number}\n\n{text}")
+            if max_characters is not None and sum(len(part) for part in pages) > max_characters:
+                raise ValueError("Document text is too long. Paste a shorter description instead.")
         result = "\n\n".join(pages)
     elif path.suffix.lower() == ".docx":
         document = Document(path)
@@ -26,13 +31,15 @@ def extract_document(path: Path) -> str:
                 blocks.extend(" | ".join(cell.text for cell in row.cells) for row in block.rows)
             else:
                 blocks.append(block.text)
-        result = "## Additional information\n\n" + "\n".join(text for text in blocks if text.strip())
+        result = f"## {docx_label}\n\n" + "\n".join(text for text in blocks if text.strip())
         if not any(text.strip() for text in blocks):
             raise ValueError("Word document has no extractable text.")
     else:
         raise ValueError("Use a .pdf or .docx file. Older .doc files must be converted first.")
     if not result.strip():
         raise ValueError("Document has no extractable text.")
+    if max_characters is not None and len(result) > max_characters:
+        raise ValueError("Document text is too long. Paste a shorter description instead.")
     return result
 
 

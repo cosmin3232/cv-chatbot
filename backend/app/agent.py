@@ -30,7 +30,8 @@ async def ask_agent(client: httpx.AsyncClient, settings: Settings, request: Chat
             "messages": messages,
             "stream": False,
             "think": False,
-            "options": {"temperature": 0.2, "num_ctx": 8192, "num_predict": 400},
+            "options": {"temperature": 0.2, "num_ctx": 8192, "num_predict": 400,
+                        **({"num_gpu": settings.ollama_num_gpu} if settings.ollama_num_gpu is not None else {})},
         },
         timeout=settings.ollama_timeout_seconds,
     )

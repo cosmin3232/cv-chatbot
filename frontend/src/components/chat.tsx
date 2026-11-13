@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { ArrowUp, ArrowUpRight, Check, Code2, Copy, Lightbulb, MessageSquare, PanelLeft, Plus, Search, Sparkles, SquarePen, Trash2, X } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -144,6 +145,7 @@ export function Chat() {
           <Button variant="ghost" size="icon" className="md:hidden" aria-label="Close conversations" onClick={() => setSidebarOpen(false)}><X /></Button>
         </div>
         <div className="space-y-4 px-4">
+          <Button asChild variant="outline" className="h-10 w-full justify-start gap-2 rounded-xl"><Link href="/job-match"><SquarePen className="size-4" />Analyze a job description</Link></Button>
           <Button onClick={newChat} className="h-10 w-full justify-start gap-2 rounded-xl"><Plus className="size-4" />New conversation</Button>
           <label className="flex items-center gap-2 rounded-lg border bg-white px-3 focus-within:ring-2 focus-within:ring-ring/30">
             <Search className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />

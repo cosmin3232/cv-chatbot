@@ -17,6 +17,14 @@ npx shadcn@latest add dialog
 npx shadcn@latest add "https://prompt-kit.com/c/loader.json"
 ```
 
+## Job-fit analysis
+
+Open `/job-match`, or use **Analyze a job description** in the chat sidebar. Paste a description or upload PDF/DOCX, review the extracted preview, and select **Analyze fit**. Results show requirement-level statuses, job excerpts, CV evidence, explanations, and follow-up questions. Input edits clear the old report. Cancel abandons the browser request; analysis may take several minutes on a local CPU.
+
+The feature uses `src/services/job-match-service.ts`, validates report data at runtime, and calls `POST /api/job-description/extract` and `POST /api/job-match` on the configured backend. Analysis requests time out after 250 seconds; if the server deadline is increased above 240 seconds, adjust the frontend service timeout as well. The upload limit is 5 MB, the PDF page limit is 10, and reviewed text is limited to 8,000 characters and 12 distinct requirements. Documents are processed temporarily on the backend and do not become candidate knowledge.
+
+Run all frontend service tests with `node --test tests/services.test.mjs tests/job-match-service.test.mjs`.
+
 ## Getting Started
 
 Run the service tests with `node --test tests/services.test.mjs` from `frontend` using Node with built-in TypeScript support. Tests cover request payloads, response validation, bounded history, cancellation, HTTP errors, and network failures.
