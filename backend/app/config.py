@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     ollama_timeout_seconds: float = Field(default=120, gt=0, le=300)
     frontend_origin: str = "http://localhost:3000"
     knowledge_path: Path = Path("data/knowledge.md")
+    job_storage_path: Path = Path("storage/job_descriptions.sqlite3")
     requests_per_minute: int = Field(default=20, ge=1, le=1000)
     job_match_timeout_seconds: float = Field(default=240, gt=0, le=600)
     job_match_context_tokens: int = Field(default=16384, ge=8192, le=32768)
@@ -25,3 +26,9 @@ class Settings(BaseSettings):
         if self.knowledge_path.is_absolute():
             return self.knowledge_path
         return BACKEND_DIR / self.knowledge_path
+
+    @property
+    def resolved_job_storage_path(self) -> Path:
+        if self.job_storage_path.is_absolute():
+            return self.job_storage_path
+        return BACKEND_DIR / self.job_storage_path

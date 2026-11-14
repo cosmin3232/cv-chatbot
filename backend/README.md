@@ -1,6 +1,6 @@
 # CV Chatbot backend
 
-FastAPI provides `POST /api/chat` and `POST /api/job-match`, backed by a local Ollama model. MCP, a vector database, and an agent framework are not needed for this MVP. Replies and job comparisons use reviewed CV information. No conversations or job descriptions are stored on the server.
+FastAPI provides `POST /api/chat` and `POST /api/job-match`, backed by a local Ollama model. MCP, a vector database, and an agent framework are not needed for this MVP. Replies and job comparisons use reviewed CV information. Successfully extracted job uploads are saved in a private SQLite archive for the owner; conversations are not stored on the server.
 
 ## Setup (PowerShell)
 
@@ -103,7 +103,32 @@ These budgets are independent of chat. Larger context windows need additional me
 
 If the installed Ollama GPU runner fails with a CUDA/toolchain error, set `OLLAMA_NUM_GPU=0` in `backend/.env` to request CPU-only inference for both chat and job analysis. Leaving it unset retains Ollama's automatic GPU selection. CPU inference can be slower; use a locally available model and measure latency. No driver changes or automatic model downloads are performed by the app.
 
-`POST /api/job-description/extract` accepts one multipart `file` field and returns `{ "text": "...", "warnings": ["..."] }`. It uses neutral job-description labels, not CV labels. Uploads are limited to 5 MB, PDFs to 10 pages, and extracted text to 8,000 characters. Expanded DOCX archives are limited to 10 MB and 1,000 entries. Streamed request bodies are bounded before multipart parsing can spool a large file. Temporary extraction files and multipart files are cleaned up; uploaded text never replaces `knowledge.md`. Scanned PDFs require OCR elsewhere or pasted text. Review the preview for extraction errors before submitting it for analysis.
+`POST /api/job-description/extract` accepts one multipart `file` field and returns `{ "documentId": "...", "text": "...", "warnings": ["..."] }`. It uses neutral job-description labels, not CV labels. Uploads are limited to 5 MB, PDFs to 10 pages, and extracted text to 8,000 characters. Expanded DOCX archives are limited to 10 MB and 1,000 entries. Streamed request bodies are bounded before multipart parsing can spool a large file. Temporary extraction files and multipart files are cleaned up after the original bytes and extracted text are saved in SQLite; uploaded text never replaces `knowledge.md`. Scanned PDFs require OCR elsewhere or pasted text. Review the preview for extraction errors before submitting it for analysis.
+
+## Private saved job descriptions
+
+Successful PDF/DOCX uploads are automatically archived in `backend/storage/job_descriptions.sqlite3`. Set `JOB_STORAGE_PATH` in `backend/.env` to override this location; relative paths are resolved against `backend`, not the terminal's working directory. SQLite uses Python's standard library, so there is no separate database service or new dependency to install. The database is initialized on backend startup. Failure to initialize stops startup; failure to save an upload returns 503 instead of claiming success.
+
+Each row contains a generated UUID, original basename (metadata only), media type, byte size, SHA-256 checksum, UTC upload timestamp, extraction status, extracted text, and the original file bytes as a SQLite BLOB. Keeping the file and text in one database transaction avoids separate filesystem/database consistency problems. Repeat uploads are saved as separate records. Rejected or unextractable uploads are not archived. Text pasted directly into analysis, recruiter edits after preview, and generated reports are not saved by this feature.
+
+The archive has no public listing, retrieval, download, or delete routes, and no recruiter history UI. A returned document ID does not grant HTTP access. The owner reads it through filesystem access or the following local commands, run from `backend`:
+
+```powershell
+# List recent upload metadata (use --limit and --offset for pagination)
+.venv/Scripts/python.exe -m app.saved_jobs list
+
+# Show one upload's metadata and extracted text
+.venv/Scripts/python.exe -m app.saved_jobs show DOCUMENT_ID
+
+# Export the original upload or its extracted text to an explicit path
+.venv/Scripts/python.exe -m app.saved_jobs export DOCUMENT_ID saved-job.docx
+.venv/Scripts/python.exe -m app.saved_jobs export DOCUMENT_ID saved-job.txt --text
+
+# Remove one record from the archive
+.venv/Scripts/python.exe -m app.saved_jobs delete DOCUMENT_ID
+```
+
+Export refuses to overwrite an existing file. Uploads remain until the owner deletes them; no automatic expiry is configured. Deletion removes the archive record, not any prior exports or backups. `backend/storage/`, including SQLite WAL/SHM sidecars, is excluded from Git. Access is limited by the backend machine's filesystem permissions; do not serve this directory as static files. Back up SQLite using a SQLite-aware backup tool or stop the backend before copying the database and any remaining sidecar files.
 
 Uploads share the per-IP rate limit and have a separate one-at-a-time extraction lock. Hostile document parsing still needs process-level resource isolation and proxy request limits before public deployment. The frontend supports cancellation, errors and retry; browser cancellation does not guarantee an already submitted local model generation stops immediately.
 

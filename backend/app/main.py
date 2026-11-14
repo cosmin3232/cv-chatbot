@@ -12,6 +12,7 @@ from .models import ChatRequest, ChatResponse
 from .runtime import agent_session
 from .job_match.routes import router as job_match_router
 from .job_match.uploads import UploadBodyLimit, router as upload_router
+from .job_store import JobStore
 
 
 def create_app(settings: Settings | None = None, transport: httpx.AsyncBaseTransport | None = None) -> FastAPI:
@@ -19,6 +20,8 @@ def create_app(settings: Settings | None = None, transport: httpx.AsyncBaseTrans
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
+        app.state.job_store = JobStore(config.resolved_job_storage_path)
+        await asyncio.to_thread(app.state.job_store.initialize)
         async with httpx.AsyncClient(transport=transport) as client:
             app.state.client = client
             app.state.agent_lock = asyncio.Lock()

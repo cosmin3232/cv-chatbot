@@ -24,3 +24,6 @@ venv/
 # Private CV documents and extracted context
 /backend/data/*
 !/backend/data/.gitkeep
+
+# Owner-only uploaded job descriptions, including SQLite sidecar files
+/backend/storage/

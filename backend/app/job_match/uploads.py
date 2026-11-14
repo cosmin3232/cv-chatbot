@@ -1,4 +1,6 @@
 import asyncio
+import logging
+import sqlite3
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from zipfile import ZipFile
@@ -13,6 +15,7 @@ MAX_FILE_BYTES = 5 * 1024 * 1024
 MAX_REQUEST_BYTES = MAX_FILE_BYTES + 65536
 UPLOAD_PATH = "/api/job-description/extract"
 router = APIRouter(tags=["Job match"])
+logger = logging.getLogger(__name__)
 
 
 class UploadBodyLimit:
@@ -37,6 +40,7 @@ class UploadBodyLimit:
 
 
 class ExtractedDescription(BaseModel):
+    documentId: str
     text: str
     warnings: list[str]
 
@@ -83,6 +87,11 @@ async def extract_description(request: Request):
                     raise HTTPException(422, str(exc)) from exc
                 except Exception as exc:
                     raise HTTPException(422, "Could not extract this document. Try a text-based PDF, DOCX, or paste the description.") from exc
+                try:
+                    document_id = await asyncio.to_thread(request.app.state.job_store.save_upload, file.filename, data, text)
+                except (sqlite3.Error, OSError) as exc:
+                    logger.exception("Failed to archive an extracted job description")
+                    raise HTTPException(503, "The upload could not be saved. Please try again later.") from exc
         except HTTPException:
             raise
-        return ExtractedDescription(text=text, warnings=["Review the extracted text, reading order, and tables before analysis. Image-only PDFs require OCR."])
+        return ExtractedDescription(documentId=document_id, text=text, warnings=["Review the extracted text, reading order, and tables before analysis. Image-only PDFs require OCR."])

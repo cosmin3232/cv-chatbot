@@ -24,7 +24,9 @@ function errorMessage(error: unknown, uploading: boolean): string {
       ? "Could not extract this document. Use a text-based PDF (up to 10 pages), DOCX, or paste a shorter description."
       : "The description could not be analyzed. Use 30–8,000 characters and at most 12 distinct requirements.";
     if (error.status === 429) return "Too many requests. Please wait a minute before trying again.";
-    if (error.status === 503) return "The assistant is busy or not configured yet. Please try again shortly.";
+    if (error.status === 503) return uploading
+      ? "The document couldn't be processed and saved. Please try again shortly."
+      : "The assistant is busy or not configured yet. Please try again shortly.";
     if (error.status === 504) return "Analysis took too long. Try fewer requirements or check the local model.";
     return "The model couldn't return a verified report. Please try again or check Ollama.";
   }
@@ -97,7 +99,7 @@ export function JobMatch() {
               event.target.value = "";
               if (file) void run(file);
             }} />
-            <p className="mt-2 text-xs leading-5 text-muted-foreground">Up to 5 MB and 10 PDF pages. Uploads are extracted temporarily and are not saved as candidate knowledge.</p>
+            <p className="mt-2 text-xs leading-5 text-muted-foreground">Up to 5 MB and 10 PDF pages. Uploaded descriptions are saved privately for the site owner. They do not change the candidate&apos;s CV.</p>
             <label htmlFor="job-description" className="mt-6 block text-xs font-medium">2. Review the extracted text, or paste it here</label>
             <Textarea id="job-description" value={text} maxLength={8000} disabled={Boolean(phase)} placeholder="Job title, responsibilities, required skills, and preferred experience..." className="mt-2 min-h-72 resize-y bg-background text-sm leading-6" onChange={(event) => { setText(event.target.value); setReport(null); setError(""); }} />
             <p className="mt-2 text-right text-[11px] text-muted-foreground">{text.length.toLocaleString()} / 8,000 characters</p>
@@ -107,7 +109,7 @@ export function JobMatch() {
               <Button disabled={Boolean(phase) || text.trim().length < 30} onClick={() => void run()} className="h-10 gap-2 px-4"><FileSearch className="size-4" />Analyze fit</Button>
               {phase && <Button variant="outline" onClick={cancel}>Cancel</Button>}
             </div>
-            <p role="status" className="mt-4 text-xs leading-5 text-muted-foreground">{phase === "uploading" ? "Extracting your document..." : phase === "analyzing" ? "Extracting requirements and comparing CV evidence. Local analysis may take several minutes." : "Up to 12 distinct requirements per analysis. Missing details stay unknown."}</p>
+            <p role="status" className="mt-4 text-xs leading-5 text-muted-foreground">{phase === "uploading" ? "Extracting and saving your document..." : phase === "analyzing" ? "Extracting requirements and comparing CV evidence. Local analysis may take several minutes." : "Up to 12 distinct requirements per analysis. Missing details stay unknown."}</p>
           </section>
 
           <section ref={reportRef} tabIndex={-1} aria-labelledby="report-title" className="min-w-0 rounded-2xl border bg-background p-5 outline-none sm:p-6 focus-visible:ring-2 focus-visible:ring-ring">
