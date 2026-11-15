@@ -13,9 +13,8 @@ import { ScrollButton } from "@/components/ui/scroll-button";
 import { cn } from "@/lib/utils";
 import { agentService } from "@/services/agent-service";
 import { HttpError } from "@/services/http-client";
+import { createConversation, type ChatMessage, type Conversation } from "@/services/chat-session";
 
-type ChatMessage = { id: string; role: "user" | "assistant"; content: string };
-type Conversation = { id: string; title: string; messages: ChatMessage[]; draft: string; isLoading: boolean; error: string | null };
 
 const suggestions = [
   { icon: Lightbulb, title: "Career overview", description: "Get to know the candidate", prompt: "Give me a brief overview of the candidate's professional background.", color: "bg-amber-50 text-amber-700" },
@@ -24,7 +23,6 @@ const suggestions = [
   { icon: MessageSquare, title: "Role suitability", description: "Find evidence for your opening", prompt: "Based on the provided information, what types of roles could suit this candidate and why?", color: "bg-emerald-50 text-emerald-700" },
 ];
 
-const initialConversation: Conversation = { id: "initial", title: "New conversation", messages: [], draft: "", isLoading: false, error: null };
 
 function CopyMessage({ content }: { content: string }) {
   const [copied, setCopied] = useState(false);
@@ -51,8 +49,17 @@ function CopyMessage({ content }: { content: string }) {
 }
 
 export function Chat() {
-  const [conversations, setConversations] = useState<Conversation[]>([initialConversation]);
-  const [activeId, setActiveId] = useState("initial");
+  const [initialConversation, setInitialConversation] = useState<Conversation | null>(null);
+  useEffect(() => { setInitialConversation(createConversation()); }, []);
+  if (!initialConversation) {
+    return <main className="flex h-dvh items-center justify-center bg-background text-sm text-muted-foreground" role="status">Starting a new conversation...</main>;
+  }
+  return <ChatWorkspace initialConversation={initialConversation} />;
+}
+
+function ChatWorkspace({ initialConversation }: { initialConversation: Conversation }) {
+  const [conversations, setConversations] = useState<Conversation[]>(() => [initialConversation]);
+  const [activeId, setActiveId] = useState(() => conversations[0].id);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [query, setQuery] = useState("");
   const composerRef = useRef<HTMLDivElement>(null);
@@ -90,6 +97,7 @@ export function Chat() {
     try {
       const response = await agentService.sendPrompt({
         conversationId,
+        messageId: message.id,
         prompt: content,
         history: active.messages.map(({ role, content }) => ({ role, content })),
       }, { signal: controller.signal });
@@ -116,13 +124,9 @@ export function Chat() {
   }
 
   function newChat() {
-    const empty = conversations.find((conversation) => !conversation.messages.length && !conversation.draft);
-    if (empty) setActiveId(empty.id);
-    else {
-      const conversation = { ...initialConversation, id: crypto.randomUUID() };
-      setConversations((previous) => [conversation, ...previous]);
-      setActiveId(conversation.id);
-    }
+    const conversation = createConversation();
+    setConversations((previous) => [conversation, ...previous]);
+    setActiveId(conversation.id);
     setSidebarOpen(false);
     setQuery("");
     composerRef.current?.querySelector("textarea")?.focus();
@@ -132,7 +136,7 @@ export function Chat() {
     requests.current.get(active.id)?.abort();
     requests.current.delete(active.id);
     const remaining = conversations.filter((conversation) => conversation.id !== active.id);
-    const next = remaining.length ? remaining : [{ ...initialConversation, id: crypto.randomUUID() }];
+    const next = remaining.length ? remaining : [createConversation()];
     setConversations(next);
     setActiveId(next[0].id);
   }
@@ -164,7 +168,7 @@ export function Chat() {
           </nav>
         </div>
         <div className="m-4 rounded-xl border bg-white p-4"><p className="flex items-center gap-2 text-xs font-medium"><Sparkles className="size-3.5" />About the candidate</p><p className="mt-2 text-xs leading-5 text-muted-foreground">Ask about experience, skills, and projects. Answers are based on the supplied CV and notes.</p></div>
-        <div className="flex items-center gap-3 border-t px-5 py-4"><Avatar><AvatarFallback className="bg-zinc-200 text-xs">Y</AvatarFallback></Avatar><div><p className="text-xs font-medium">Your workspace</p><p className="mt-0.5 text-[11px] text-muted-foreground">Conversations stay in this session</p></div></div>
+        <div className="flex items-center gap-3 border-t px-5 py-4"><Avatar><AvatarFallback className="bg-zinc-200 text-xs">Y</AvatarFallback></Avatar><div><p className="text-xs font-medium">Your workspace</p><p className="mt-0.5 text-[11px] text-muted-foreground">Chats saved privately for the site owner</p></div></div>
       </aside>
 
       <main className={cn("min-w-0 flex-1 flex-col", sidebarOpen ? "hidden md:flex" : "flex")}>
@@ -173,7 +177,7 @@ export function Chat() {
             <Button variant="ghost" size="icon" className="md:hidden" aria-label="Open conversations" aria-expanded={sidebarOpen} aria-controls="conversation-sidebar" onClick={() => setSidebarOpen(true)}><PanelLeft /></Button>
             <div className="min-w-0"><p className="truncate text-sm font-medium">{active.messages.length ? active.title : "Meet the candidate"}</p><p className="mt-0.5 text-xs text-muted-foreground">Experience, skills, and the story behind the CV</p></div>
           </div>
-          {active.messages.length > 0 && <Button variant="ghost" size="icon" aria-label="Delete current conversation" onClick={deleteChat}><Trash2 className="size-4 text-muted-foreground" /></Button>}
+          {active.messages.length > 0 && <Button variant="ghost" size="icon" aria-label="Remove conversation from this browser session" title="Remove from this browser session" onClick={deleteChat}><Trash2 className="size-4 text-muted-foreground" /></Button>}
         </header>
 
         {active.messages.length === 0 ? (

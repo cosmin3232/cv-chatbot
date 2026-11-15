@@ -7,6 +7,7 @@ export type AgentMessage = {
 
 export type SendPromptRequest = {
   conversationId: string;
+  messageId?: string;
   prompt: string;
   history: AgentMessage[];
 };

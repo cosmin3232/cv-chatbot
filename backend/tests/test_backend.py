@@ -23,7 +23,7 @@ def settings(tmp_path):
 
 
 def payload(**changes):
-    return {"conversationId": "one", "prompt": "What skills does the candidate have?", "history": [], **changes}
+    return {"conversationId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", "prompt": "What skills does the candidate have?", "history": [], **changes}
 
 
 def test_chat_contract_and_grounding(settings):
@@ -118,7 +118,7 @@ def test_busy_generation_does_not_queue_more_requests(settings):
             pending = executor.submit(client.post, "/api/chat", json=payload())
             try:
                 assert started.wait(3)
-                busy = client.post("/api/chat", json=payload(conversationId="two"))
+                busy = client.post("/api/chat", json=payload(conversationId="bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"))
                 assert busy.status_code == 503
                 assert busy.headers["retry-after"] == "3"
             finally:

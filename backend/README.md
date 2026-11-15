@@ -1,6 +1,6 @@
 # CV Chatbot backend
 
-FastAPI provides `POST /api/chat` and `POST /api/job-match`, backed by a local Ollama model. MCP, a vector database, and an agent framework are not needed for this MVP. Replies and job comparisons use reviewed CV information. Successfully extracted job uploads are saved in a private SQLite archive for the owner; conversations are not stored on the server.
+FastAPI provides `POST /api/chat` and `POST /api/job-match`, backed by a local Ollama model. MCP, a vector database, and an agent framework are not needed for this MVP. Replies and job comparisons use reviewed CV information. Successfully extracted job uploads and accepted chat messages are saved in a private SQLite archive for the owner.
 
 ## Setup (PowerShell)
 
@@ -60,13 +60,34 @@ From `frontend`, copy `.env.example` to `.env.local` if a custom backend URL is 
 
 ```json
 {
-  "conversationId": "unique-conversation-id",
+  "conversationId": "30c0e97b-fbf7-4d42-b1ca-03265d5ed870",
+  "messageId": "e70cbeae-204c-4cbe-8fda-5d96263dff78",
   "prompt": "What technical experience does the candidate have?",
   "history": [{ "role": "user", "content": "Tell me about the candidate." }]
 }
 ```
 
 The prompt excludes previous messages. History may contain only `user` and `assistant` roles; client-supplied system messages are rejected. The response is `{ "content": "..." }`. The frontend validates this response at runtime.
+
+`conversationId` must be a UUID and stays the same across every message in one conversation. Use a different UUID for each new conversation/session. `messageId` is an optional UUID identifying one prompt; the frontend supplies it, and the backend generates one when omitted. Retrying a completed message with the same IDs and prompt returns its saved reply without duplicating records or invoking the model again. Reusing a message ID for different text/conversation or resending a pending message returns 409. Failed messages can be retried with the same message ID.
+
+## Saved conversations
+
+The existing private SQLite database (`JOB_STORAGE_PATH`, default `backend/storage/job_descriptions.sqlite3`) now also contains `conversations` and `conversation_messages`. Existing job uploads are preserved. Each conversation has a UUID, title, and UTC timestamps. Each message has its own UUID, a conversation foreign key, role, content, timestamp, and status. An assistant message's `reply_to` references its user prompt. Messages are listed in insertion order; deleting a conversation through the owner command cascades to all its messages.
+
+A UUID is generated in the browser on every chat page mount (including refresh), and each **New conversation** click always generates another UUID, even if the previous conversation is empty. Switching sidebar entries retains their IDs. Empty conversations are registered in SQLite only when their first prompt is accepted. A prompt is archived as `pending` before inference; the reply and `completed` status are saved together before returning success. Model failures preserve the prompt as `failed`. Abrupt server termination can leave a `pending` record; a new message ID or a new conversation can still be used afterward. Requests rejected during input validation, rate limiting, busy checks, or missing-CV checks are not archived.
+
+Conversation history still comes from the bounded `history` field for model context. Only actual prompts and model replies are archived; resubmitted history is not inserted as new messages. Browser history and drafts are in memory and are not restored after a refresh. Removing a chat from the browser sidebar does not remove the owner's archive. A cancelled browser request may still complete on the server and be archived. No public conversation listing, retrieval, or delete endpoints are exposed, and IDs do not act as authenticated recruiter accounts.
+
+Owner commands, run locally from `backend`:
+
+```powershell
+.venv/Scripts/python.exe -m app.saved_conversations list
+.venv/Scripts/python.exe -m app.saved_conversations show CONVERSATION_UUID
+.venv/Scripts/python.exe -m app.saved_conversations delete CONVERSATION_UUID
+```
+
+`list` also accepts `--limit` and `--offset`. Records remain until the owner deletes them. Database files and sidecars remain excluded from Git. Keep the database directory private on the host. The archive stores chat conversations only; the job-fit report flow remains separate.
 
 Requests allow at most 2,000 prompt characters, 12 history messages, and 4,000 total history characters. The frontend retains only a contiguous recent history within those limits. The model uses an 8,192-token context and a 400-token output limit. Character limits are conservative estimates, not exact token counts; test with the actual documents and languages before deployment.
 

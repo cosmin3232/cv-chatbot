@@ -3,7 +3,7 @@ import { test } from "node:test";
 import { agentService } from "../src/services/agent-service.ts";
 import { HttpError, postJson } from "../src/services/http-client.ts";
 
-const request = { conversationId: "test", prompt: "Hello", history: [] };
+const request = { conversationId: "30c0e97b-fbf7-4d42-b1ca-03265d5ed870", prompt: "Hello", history: [] };
 
 test("agent sends prompt and history to the chat API", async (t) => {
   t.mock.method(globalThis, "fetch", async (url, options) => {

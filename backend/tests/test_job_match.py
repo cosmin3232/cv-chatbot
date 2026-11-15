@@ -209,7 +209,7 @@ def test_job_match_and_chat_share_rate_limit(settings):
     client, calls = scripted_client(settings, [extraction(), comparison()])
     with client:
         assert analyze(client).status_code == 200
-        response = client.post("/api/chat", json={"conversationId": "one", "prompt": "Hello", "history": []})
+        response = client.post("/api/chat", json={"conversationId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", "prompt": "Hello", "history": []})
         assert response.status_code == 429
     assert len(calls) == 2
 
@@ -234,7 +234,7 @@ def test_job_match_blocks_chat_while_generating(settings):
             pending = executor.submit(analyze, client)
             try:
                 assert started.wait(3)
-                response = client.post("/api/chat", json={"conversationId": "one", "prompt": "Hello"})
+                response = client.post("/api/chat", json={"conversationId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", "prompt": "Hello"})
                 assert response.status_code == 503
                 assert response.headers["retry-after"] == "3"
             finally:
@@ -266,7 +266,7 @@ def test_cpu_option_is_forwarded_to_chat_and_analysis(settings, gpu):
     client, calls = scripted_client(settings, [extraction(), comparison(), httpx.Response(200, json={"message": {"content": "Hello"}})])
     with client:
         assert analyze(client).status_code == 200
-        assert client.post("/api/chat", json={"conversationId": "test", "prompt": "Hello"}).status_code == 200
+        assert client.post("/api/chat", json={"conversationId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", "prompt": "Hello"}).status_code == 200
     for call in calls:
         if gpu is None:
             assert "num_gpu" not in call["options"]

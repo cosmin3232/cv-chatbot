@@ -1,4 +1,5 @@
 from typing import Literal
+from uuid import UUID, uuid4
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -11,7 +12,8 @@ class Message(BaseModel):
 
 class ChatRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    conversationId: str = Field(min_length=1, max_length=100)
+    conversationId: UUID
+    messageId: UUID = Field(default_factory=uuid4)
     prompt: str = Field(min_length=1, max_length=2000)
     history: list[Message] = Field(default_factory=list, max_length=12)
 
