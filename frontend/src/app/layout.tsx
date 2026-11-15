@@ -24,7 +24,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col"><TooltipProvider>{children}</TooltipProvider></body>
+      <body>
+        <div className="min-h-dvh flex flex-col">
+          <TooltipProvider>{children}</TooltipProvider>
+        </div>
+      </body>
     </html>
   );
 }
