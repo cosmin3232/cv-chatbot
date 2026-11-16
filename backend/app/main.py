@@ -55,8 +55,9 @@ def create_app(settings: Settings | None = None, transport: httpx.AsyncBaseTrans
             knowledge_ready = True
         except ValueError:
             knowledge_ready = False
-        # Liveness/configuration only; this does not claim Ollama is ready.
-        return {"status": "ok", "knowledgeReady": knowledge_ready, "model": config.ollama_model}
+        # Liveness/configuration only; this does not contact or wake the model.
+        return {"status": "ok", "knowledgeReady": knowledge_ready, "model": config.ollama_model,
+                "inferenceProvider": config.inference_provider}
 
     @app.post("/api/chat", response_model=ChatResponse)
     async def chat(payload: ChatRequest, request: Request):

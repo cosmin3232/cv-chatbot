@@ -1,0 +1,9 @@
+{
+  "input": {
+    "model": "llama3.1:8b",
+    "messages": [{"role": "user", "content": "Reply with exactly: worker ready"}],
+    "stream": false,
+    "think": false,
+    "options": {"temperature": 0, "num_ctx": 8192, "num_predict": 32}
+  }
+}

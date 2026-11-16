@@ -1,0 +1,8 @@
+# Allow only worker files. Never send CVs, SQLite, repository secrets or dependencies.
+*
+!Dockerfile
+!requirements.txt
+!runtime.py
+!bake_model.py
+!worker.py
+!test_input.json

@@ -9,6 +9,7 @@ import httpx
 from fastapi import HTTPException, Request
 
 from .knowledge import load_knowledge
+from .inference import InferenceError
 
 
 def enforce_rate_limit(request: Request):
@@ -45,6 +46,8 @@ async def agent_session(request: Request):
     async with state.agent_lock:
         try:
             yield knowledge
+        except InferenceError as exc:
+            raise HTTPException(exc.status_code, exc.detail) from exc
         except (httpx.TimeoutException, TimeoutError) as exc:
             raise HTTPException(504, "The agent took too long to respond. Please try again.") from exc
         except httpx.HTTPStatusError as exc:
@@ -52,6 +55,7 @@ async def agent_session(request: Request):
                 raise HTTPException(503, "The configured model is unavailable. Ask the owner to pull it in Ollama.") from exc
             raise HTTPException(502, "Ollama could not complete the request.") from exc
         except httpx.RequestError as exc:
-            raise HTTPException(503, "Ollama is unavailable. Please try again later.") from exc
+            provider = "Runpod" if config.inference_provider == "runpod" else "Ollama"
+            raise HTTPException(503, f"{provider} is unavailable. Please try again later.") from exc
         except (ValueError, TypeError, AttributeError) as exc:
             raise HTTPException(502, "The agent returned an invalid or unverifiable answer. Please try again.") from exc

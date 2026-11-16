@@ -33,7 +33,8 @@ async function sendPrompt(
     characters += message.content.length;
   }
   const response = await postJson<unknown>(`${baseUrl}/api/chat`, { ...request, history }, {
-    signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(130_000)]) : AbortSignal.timeout(130_000),
+    // Includes the backend's 300-second Runpod queue/cold-start budget.
+    signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(310_000)]) : AbortSignal.timeout(310_000),
   });
   if (typeof response !== "object" || response === null || !("content" in response) || typeof response.content !== "string" || !response.content.trim()) {
     throw new Error("The agent returned an invalid answer.");

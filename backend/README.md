@@ -1,6 +1,26 @@
 # CV Chatbot backend
 
-FastAPI provides `POST /api/chat` and `POST /api/job-match`, backed by a local Ollama model. MCP, a vector database, and an agent framework are not needed for this MVP. Replies and job comparisons use reviewed CV information. Successfully extracted job uploads and accepted chat messages are saved in a private SQLite archive for the owner.
+FastAPI provides `POST /api/chat` and `POST /api/job-match`, backed by local Ollama or an Ollama Runpod Serverless worker. MCP, a vector database, and an agent framework are not needed at application runtime. Replies and job comparisons use reviewed CV information. Successfully extracted job uploads and accepted chat messages are saved in a private SQLite archive for the owner.
+
+## Optional Runpod inference
+
+Local Ollama remains the default (`INFERENCE_PROVIDER=ollama`). For cloud GPU inference,
+follow the [worker build and deployment guide](../deploy/runpod/README.md), then set
+`INFERENCE_PROVIDER=runpod`, `RUNPOD_ENDPOINT_ID`, `RUNPOD_API_KEY`, and a matching
+`OLLAMA_MODEL` in the ignored backend `.env`. Use `RUNPOD_TIMEOUT_SECONDS=300` and
+`JOB_MATCH_TIMEOUT_SECONDS=600` to accommodate cold starts and both analysis stages.
+Restart FastAPI after configuration changes. Missing cloud credentials fail settings
+validation; provider failures never fall back silently to local inference.
+
+The backend sends messages, relevant CV context, and JSON output schemas through
+Runpod's queue API, polls with a bounded deadline, and cancels known unfinished jobs
+on timeout or backend task cancellation. Local `OLLAMA_NUM_GPU` only applies to local
+Ollama. Keep API keys server-side, and keep SQLite/uploads on the backend's persistent
+disk. No model, private documents, or database are included in the worker build context.
+
+Run `.venv/Scripts/python.exe -m app.check_inference` from `backend` to invoke the
+selected provider with a fixed test prompt and no CV data. `/health` only reports
+configuration/knowledge readiness and never starts a GPU worker.
 
 ## Setup (PowerShell)
 

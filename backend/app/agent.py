@@ -1,6 +1,7 @@
 import httpx
 
 from .config import Settings
+from .inference import generate
 from .models import ChatRequest
 
 SYSTEM_PROMPT = """You are a professional assistant helping recruiters learn about the candidate.
@@ -23,20 +24,11 @@ async def ask_agent(client: httpx.AsyncClient, settings: Settings, request: Chat
         *[message.model_dump() for message in request.history],
         {"role": "user", "content": request.prompt},
     ]
-    response = await client.post(
-        settings.ollama_url.rstrip("/") + "/api/chat",
-        json={
-            "model": settings.ollama_model,
-            "messages": messages,
-            "stream": False,
-            "think": False,
-            "options": {"temperature": 0.2, "num_ctx": 8192, "num_predict": 400,
-                        **({"num_gpu": settings.ollama_num_gpu} if settings.ollama_num_gpu is not None else {})},
-        },
-        timeout=settings.ollama_timeout_seconds,
+    data = await generate(
+        client, settings, messages=messages,
+        options={"temperature": 0.2, "num_ctx": 8192, "num_predict": 400},
+        timeout=settings.chat_timeout_seconds,
     )
-    response.raise_for_status()
-    data = response.json()
     content = data.get("message", {}).get("content") if isinstance(data, dict) else None
     if not isinstance(content, str) or not content.strip():
         raise ValueError("Ollama returned an invalid or empty answer.")

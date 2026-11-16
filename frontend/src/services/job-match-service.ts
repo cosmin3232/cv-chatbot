@@ -55,7 +55,8 @@ async function analyze(jobDescription: string, signal?: AbortSignal): Promise<Jo
   const text = jobDescription.trim();
   if (text.length < 30 || text.length > 8000) throw new Error("Use a job description between 30 and 8,000 characters.");
   return parseJobMatchReport(await postJson<unknown>(`${apiUrl()}/api/job-match`, { jobDescription: text }, {
-    signal: withTimeout(signal, 250_000),
+    // Includes the optional 600-second backend budget for both inference stages.
+    signal: withTimeout(signal, 610_000),
   }));
 }
 

@@ -10,6 +10,7 @@ import httpx
 from pydantic import BaseModel
 
 from ..config import Settings
+from ..inference import generate
 from .models import (
     CandidateEvidence, Comparison, ExtractedJob, JobMatchResponse,
     MAX_REQUIREMENTS, RequirementAssessment,
@@ -64,20 +65,13 @@ async def structured_call(
         {"role": "user", "content": json.dumps(data, ensure_ascii=False)},
     ]
     for attempt in range(2):
-        response = await client.post(
-            settings.ollama_url.rstrip("/") + "/api/chat",
-            json={
-                "model": settings.ollama_model, "messages": messages,
-                "stream": False, "think": False, "format": schema_json,
-                "options": {"temperature": 0, "num_ctx": settings.job_match_context_tokens,
-                            "num_predict": settings.job_match_output_tokens,
-                            **({"num_gpu": settings.ollama_num_gpu} if settings.ollama_num_gpu is not None else {})},
-            },
-            timeout=settings.job_match_timeout_seconds,
-        )
-        response.raise_for_status()
         try:
-            body = response.json()
+            body = await generate(
+                client, settings, messages=messages, format=schema_json,
+                options={"temperature": 0, "num_ctx": settings.job_match_context_tokens,
+                         "num_predict": settings.job_match_output_tokens},
+                timeout=settings.job_match_timeout_seconds,
+            )
             if not isinstance(body, dict) or body.get("done_reason") == "length":
                 raise ValueError("Incomplete model response")
             message = body.get("message")
